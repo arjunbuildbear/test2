@@ -72,7 +72,7 @@ async function checkNodeLiveness(url, maxRetries = 10, delay = 5000) {
       console.log(resp.status, resp.data)
 
       // Check if status is 200 and if result is absent
-      if (resp.status === 200 && !resp.data.result) {
+      if (resp.status === 200 && resp.data.result) {
         console.log(`Node is live: ${url}`);
         return true;
       }
