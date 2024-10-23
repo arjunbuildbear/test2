@@ -1,44 +1,14 @@
 name: 'bb_action_ci'
 description: 'BB'
+
 inputs:
   network:
     description: 'List of networks you want to deploy on'
     required: true
-    default: |
-      [
-        {
-          "name": "mainnet",
-          "url": "http://localhost:8545",
-          "chainId": 1
-        }
-      ]
   deployCmd:
     description: 'Command to deploy the contract'
     required: true
-
-env:
-  FOUNDRY_PROFILE: ci
-
-jobs:
-  check:
-    strategy:
-      fail-fast: true
-    name: Foundry project
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
-      - name: Show Forge version
-        run: |
-          forge --version
-      - name: Setup node
-        run: |
-          npm install      
+     
 
 runs:
   using: 'node20'
