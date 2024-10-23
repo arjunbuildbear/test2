@@ -83,11 +83,18 @@ async function executeDeploy(deployCmd) {
     // Loop through the network and create nodes
     for (const net of network) {
       const url = await createNode(repoName, commitHash, net.chainId, net.blockNumber);
+      setTimeout(() => {
+        console.log(`Node created with URL: ${url}`);
+      }, 5000); // 5 seconds delay
+
+       // Execute the deploy command after nodes have been created
+    await executeDeploy(deployCmd);
+
+
       console.log(`Node created with URL: ${url}`);
     }
 
-    // Execute the deploy command after nodes have been created
-    await executeDeploy(deployCmd);
+   
 
   } catch (error) {
     core.setFailed(error.message);
