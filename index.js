@@ -33,7 +33,7 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
     method: "buildbearInternal_createNode",
     params: [
       {
-        fork: { id: chainId, blockNumber },
+        fork: { id: chainId.toString(), blockNumber },
         chainId: parseInt(chainId),
       },
     ],
