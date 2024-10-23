@@ -41,3 +41,7 @@ jobs:
 runs:
   using: 'node20'
   main: 'index.js'
+
+branding:
+  icon: 'activity'
+  color: 'green'  
