@@ -15,13 +15,13 @@ const DEFAULT_MNEMONIC = "test test test test test test test test test test test
 core.exportVariable('MNEMONIC', DEFAULT_MNEMONIC);
 
 /**
- * Creates a sandbox node and returns the buildbear RPC URL.
+ * Creates a sandbox node and returns the BuildBear RPC URL.
  * 
  * @param {string} repoName - The repository name
  * @param {string} commitHash - The commit hash
  * @param {number} chainId - The chain ID for the fork
  * @param {number} blockNumber - The block number for the fork
- * @returns {string} - The buildbear RPC URL for the sandbox node
+ * @returns {string} - The BuildBear RPC URL for the sandbox node
  */
 async function createNode(repoName, commitHash, chainId, blockNumber) {
   const sandboxId = `${repoName}-${commitHash.slice(0, 8)}-${randomBytes(4).toString("hex")}`;
@@ -39,15 +39,52 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
     ],
   };
 
-  axios.post(url, data)
+  await axios.post(url, data);
 
   console.log(`Created sandbox ID: ${sandboxId}`);
-  console.log(`Buildbear RPC URL: ${url}`);
+  console.log(`BuildBear RPC URL: ${url}`);
 
   // Export RPC URL as environment variable for later use
   core.exportVariable('BUILDBEAR_RPC_URL', url);
 
   return url;
+}
+
+/**
+ * Checks if the node is ready by continuously polling for status.
+ * 
+ * @param {string} url - The BuildBear RPC URL
+ * @param {number} maxRetries - Maximum number of retries before giving up
+ * @param {number} delay - Delay between retries in milliseconds
+ * @returns {boolean} - Returns true if the node becomes live, otherwise false
+ */
+async function checkNodeLiveness(url, maxRetries = 10, delay = 5000) {
+  let attempts = 0;
+  while (attempts < maxRetries) {
+    try {
+      const resp = await axios.post(url, {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "eth_chainId",
+        params: []
+      });
+
+      // Check if status is 200 and if result is absent
+      if (resp.status === 200 && !resp.data.result) {
+        console.log(`Node is live: ${url}`);
+        return true;
+      }
+    } catch (error) {
+      console.error(`Attempt ${attempts + 1}: Node is not live yet. Retrying...`);
+    }
+
+    // Wait for the specified delay before the next attempt
+    await new Promise(resolve => setTimeout(resolve, delay));
+    attempts++;
+  }
+
+  console.error(`Node did not become live after ${maxRetries} attempts.`);
+  return false;
 }
 
 /**
@@ -83,18 +120,21 @@ async function executeDeploy(deployCmd) {
     // Loop through the network and create nodes
     for (const net of network) {
       const url = await createNode(repoName, commitHash, net.chainId, net.blockNumber);
-      setTimeout(() => {
-        console.log(`Node created with URL: ${url}`);
-      }, 5000); // 5 seconds delay
 
-       // Execute the deploy command after nodes have been created
-    await executeDeploy(deployCmd);
+      // Check if the node is live by continuously checking until successful or max retries
+      const isNodeLive = await checkNodeLiveness(url);
+      if (isNodeLive) {
+        // 5 seconds delay before logging the URL
+        setTimeout(() => {
+          console.log(`Node created with URL: ${url}`);
+        }, 5000);
 
-
-      console.log(`Node created with URL: ${url}`);
+        // Execute the deploy command after node becomes live
+        await executeDeploy(deployCmd);
+      } else {
+        console.error(`Node is not live for URL: ${url}. Skipping deployment.`);
+      }
     }
-
-   
 
   } catch (error) {
     core.setFailed(error.message);
