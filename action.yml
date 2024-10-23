@@ -37,6 +37,9 @@ jobs:
       - name: Show Forge version
         run: |
           forge --version
+      - name: Setup node
+        run: |
+          npm install      
 
 runs:
   using: 'node20'
