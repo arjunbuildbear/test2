@@ -15,7 +15,6 @@ inputs:
   deployCmd:
     description: 'Command to deploy the contract'
     required: true
-    default: 'forge test'
 
 env:
   FOUNDRY_PROFILE: ci
