@@ -1,5 +1,6 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
+const { default: axios } = require('axios');
 const { exec } = require('child_process');
 const { randomBytes } = require('crypto');
 const util = require('util');
@@ -37,6 +38,8 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
       },
     ],
   };
+
+  axios.post(url, data)
 
   console.log(`Created sandbox ID: ${sandboxId}`);
   console.log(`Buildbear RPC URL: ${url}`);
