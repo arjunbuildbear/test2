@@ -133,6 +133,13 @@ async function executeDeploy(deployCmd) {
 
         // Execute the deploy command after node becomes live
         await executeDeploy(deployCmd);
+
+   
+        core.setOutput('deployments', "here deployments details come");
+  
+  } else {
+    core.warning('get preview-url error');
+  }
       } else {
         console.error(`Node is not live for URL: ${url}. Skipping deployment.`);
       }
