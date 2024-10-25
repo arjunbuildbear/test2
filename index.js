@@ -193,6 +193,7 @@ async function checkNodeLiveness(url, maxRetries = 10, delay = 5000) {
         return true;
       }
     } catch (error) {
+      console.log(error)
       console.error(`Attempt ${attempts + 1}: Node is not live yet. Retrying...`);
     }
 
