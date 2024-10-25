@@ -17,24 +17,149 @@ const DEFAULT_MNEMONIC = "test test test test test test test test test test test
 core.exportVariable('MNEMONIC', DEFAULT_MNEMONIC);
 
 /**
- * Recursively walks through directories
+ * Recursively walk through directories
  * @param {string} dir Directory to walk through
- * @yields {Object} File entry information
+ * @returns {AsyncGenerator<{path: string, name: string, isFile: boolean, isDirectory: boolean}>}
  */
 async function* walk(dir) {
   const files = await fs.readdir(dir, { withFileTypes: true });
-  for (const file of files) {
-    const filePath = path.join(dir, file.name);
-    if (file.isDirectory()) {
-      yield* walk(filePath);
+  for (const dirent of files) {
+    const res = path.resolve(dir, dirent.name);
+    if (dirent.isDirectory()) {
+      yield* walk(res);
     } else {
       yield {
-        path: filePath,
-        name: file.name,
-        isFile: file.isFile(),
-        isDirectory: file.isDirectory()
+        path: res,
+        name: dirent.name,
+        isFile: dirent.isFile(),
+        isDirectory: false
       };
     }
+  }
+}
+
+/**
+ * Find a directory in project root
+ * @param {string} targetDir Directory name to find
+ * @returns {Promise<string|null>}
+ */
+async function findDirectory(targetDir) {
+  const rootDir = process.cwd();
+  try {
+    const entries = await fs.readdir(rootDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() && entry.name === targetDir) {
+        return path.join(rootDir, entry.name);
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error finding directory ${targetDir}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Processes broadcast directory to collect deployment information
+ * @param {string} chainId Chain identifier
+ * @returns {Promise<Object>} Deployment information
+ */
+async function processBroadcastDirectory(chainId) {
+  try {
+    // Find broadcast and build directories
+    const broadcastDir = await findDirectory('broadcast');
+    if (!broadcastDir) {
+      console.log('No broadcast directory found');
+      return null;
+    }
+
+    const buildDir = path.join(process.cwd(), 'build');
+    console.log(`Broadcast directory: ${broadcastDir}`);
+    console.log(`Build directory: ${buildDir}`);
+
+    // Process event ABIs from build directory
+    const eventAbi = [];
+    if (await fs.access(buildDir).then(() => true).catch(() => false)) {
+      for await (const entry of walk(buildDir)) {
+        if (entry.isFile && entry.name.endsWith('.json')) {
+          const content = await fs.readFile(entry.path, 'utf8');
+          console.log("CONTENT")
+          const buildJson = JSON.parse(content);
+          if (Array.isArray(buildJson.abi)) {
+            eventAbi.push(...buildJson.abi.filter(x => x.type === "event"));
+          }
+        }
+      }
+    }
+
+    // Process deployment data
+    const deployments = {
+      transactions: [],
+      receipts: [],
+      libraries: []
+    };
+
+    // Process broadcast files
+    for await (const entry of walk(broadcastDir)) {
+      if (entry.isFile &&
+        entry.name === "run-latest.json" &&
+        entry.path.includes(chainId.toString())) {
+        console.log(`Processing broadcast file: ${entry.path}`);
+
+        const content = await fs.readFile(entry.path, 'utf8');
+        const runLatestJson = JSON.parse(content);
+
+        if (runLatestJson.transactions) {
+          deployments.transactions.push(...runLatestJson.transactions);
+        }
+        if (runLatestJson.receipts) {
+          deployments.receipts.push(...runLatestJson.receipts);
+        }
+        if (runLatestJson.libraries) {
+          deployments.libraries.push(...runLatestJson.libraries);
+        }
+      }
+    }
+
+    // Sort receipts by block number
+    if (deployments.receipts.length > 0) {
+      deployments.receipts.sort((a, b) =>
+        parseInt(a.blockNumber) - parseInt(b.blockNumber)
+      );
+
+      // Sort transactions based on receipt order
+      deployments.transactions.sort((a, b) => {
+        const aIndex = deployments.receipts.findIndex(
+          receipt => receipt.transactionHash === a.hash
+        );
+        const bIndex = deployments.receipts.findIndex(
+          receipt => receipt.transactionHash === b.hash
+        );
+        return aIndex - bIndex;
+      });
+
+      // Process logs
+      deployments.receipts = deployments.receipts.map(receipt => ({
+        ...receipt,
+        decodedLogs: receipt.logs.map(log => {
+          try {
+            return {
+              eventName: "Event",
+              data: log.data,
+              topics: log.topics
+            };
+          } catch (e) {
+            console.log('Error decoding log:', e);
+            return null;
+          }
+        })
+      }));
+    }
+
+    return deployments;
+  } catch (error) {
+    console.error('Error processing broadcast directory:', error);
+    throw error;
   }
 }
 
@@ -72,99 +197,6 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
   core.exportVariable('BUILDBEAR_RPC_URL', url);
   return { url, sandboxId };
 }
-
-/**
- * Processes deployment data from broadcast and build directories
- * @param {string} sandboxId Sandbox identifier
- * @param {number} chainId Chain identifier
- * @param {number} blockNumber Block number
- * @param {string} chainName Chain name
- * @returns {Object} Processed deployment data
- */
-async function processDeploymentData(sandboxId, chainId, blockNumber, chainName) {
-  const broadcastDir = await findDirectory('broadcast');
-  const buildDir = broadcastDir ? broadcastDir.replace('broadcast', 'build') : null;
-  
-  console.log(`Processing deployment data for chain ${chainName} (${chainId})`);
-  console.log(`Build directory: ${buildDir}`);
-
-  const eventAbi = await collectEventAbi(buildDir);
-  const deploymentData = await collectDeploymentData(broadcastDir, chainId, sandboxId, chainId, blockNumber, eventAbi);
-
-  return deploymentData;
-}
-
-/**
- * Finds a specific directory in the project
- * @param {string} targetDir Directory name to find
- * @returns {Promise<string|null>} Path to directory or null
- */
-async function findDirectory(targetDir) {
-  for await (const entry of walk(".")) {
-    if (entry.isDirectory && entry.name === targetDir) {
-      return entry.path;
-    }
-  }
-  return null;
-}
-
-/**
- * Collects event ABI from build files
- * @param {string} buildDir Build directory path
- * @returns {Promise<Array>} Array of event ABIs
- */
-async function collectEventAbi(buildDir) {
-  const eventAbi = [];
-  if (buildDir) {
-    for await (const entry of walk(buildDir)) {
-      if (entry.isFile && entry.name.endsWith(".json")) {
-        const buildJson = JSON.parse(await fs.readFile(entry.path, 'utf8'));
-        if (Array.isArray(buildJson.abi)) {
-          eventAbi.push(...buildJson.abi.filter(x => x.type === "event"));
-        }
-      }
-    }
-  }
-  return eventAbi;
-}
-
-/**
- * Formats deployment data for GitHub comment
- * @param {Object} deploymentData Deployment information
- * @returns {string} Formatted markdown string
- */
-function formatDeploymentComment(deploymentData) {
-  let comment = '## Deployment Summary\n\n';
-  
-  Object.entries(deploymentData).forEach(([chainName, data]) => {
-    comment += `### Chain: ${chainName}\n`;
-    comment += `- **Chain ID**: ${data.chainId}\n`;
-    comment += `- **RPC URL**: ${data.rpcUrl}\n`;
-    comment += `- **Block Number**: ${data.blockNumber}\n\n`;
-
-    comment += '#### Deployed Contracts\n';
-    data.deployments.transactions.forEach((tx, index) => {
-      const receipt = data.deployments.receipts[index];
-      if (receipt) {
-        comment += `- **Transaction**: ${tx.hash}\n`;
-        comment += `  - Contract Address: ${receipt.contractAddress || 'N/A'}\n`;
-        comment += `  - Block Number: ${receipt.blockNumber}\n`;
-        if (receipt.decodedLogs) {
-          comment += '  - Events:\n';
-          receipt.decodedLogs.forEach(log => {
-            if (log) {
-              comment += `    - ${log.eventName}\n`;
-            }
-          });
-        }
-        comment += '\n';
-      }
-    });
-  });
-
-  return comment;
-}
-
 
 /**
  * Checks if the node is ready by continuously polling for status.
@@ -232,20 +264,19 @@ async function executeDeploy(deployCmd) {
     const deployCmd = core.getInput('deployCmd');
     const repoName = github.context.repo.repo; // Get repository name
     const commitHash = github.context.sha; // Get commit hash
-    const allDeployments = {};
 
     console.log('Network details:', network);
     console.log(`Deploy command: ${deployCmd}`);
 
     // Loop through the network and create nodes
     for (const net of network) {
-        // Create node
-        const { url: rpcUrl, sandboxId } = await createNode(
-          repoName,
-          commitHash,
-          net.chainId,
-          net.blockNumber
-        );
+      // Create node
+      const { url: rpcUrl, sandboxId } = await createNode(
+        repoName,
+        commitHash,
+        net.chainId,
+        net.blockNumber
+      );
 
       // Check if the node is live by continuously checking until successful or max retries
       const isNodeLive = await checkNodeLiveness(rpcUrl);
@@ -256,27 +287,47 @@ async function executeDeploy(deployCmd) {
 
         // Execute the deploy command after node becomes live
         await executeDeploy(deployCmd);
-        
-      const deploymentData = await processDeploymentData(
+
+        // Process broadcast directory
+        const deploymentData = await processBroadcastDirectory(net.chainId);
+
+        // Set deployment details as output
+        const deploymentDetails = {
+          chainId: net.chainId,
+          rpcUrl,
           sandboxId,
-          net.chainId,
-          net.blockNumber,
-          net.name || `Chain-${net.chainId}`
-        );
-        
-        allDeployments[net.chainId] = deploymentData;
-        
+          status: 'success',
+          deployments: deploymentData
+        };
+
+        console.log('\nDeployment Summary:');
+        console.log('==================');
+        console.log(`Chain ID: ${net.chainId}`);
+        console.log(`RPC URL: ${rpcUrl}`);
+        console.log(`Sandbox ID: ${sandboxId}`);
+        console.log('\nDeployed Contracts:');
+        if (deploymentData) {
+          deploymentData.receipts.forEach((receipt, index) => {
+            console.log(`\n${index + 1}. Contract Address: ${receipt.contractAddress || 'N/A'}`);
+            console.log(`   Transaction Hash: ${receipt.transactionHash}`);
+            console.log(`   Block Number: ${receipt.blockNumber}`);
+            if (receipt.decodedLogs) {
+              console.log('   Events:');
+              receipt.decodedLogs.forEach(log => {
+                if (log) {
+                  console.log(`   - ${log.eventName}`);
+                }
+              });
+            }
+          });
+        }
+
+
       } else {
         console.error(`Node is not live for URL: ${rpcUrl}. Skipping deployment.`);
       }
-    
+
     }
-
- const formattedComment = formatDeploymentComment(allDeployments);
-    core.setOutput('deployment_comment', formattedComment);
-    console.log('Deployment summary:', formattedComment);
-
-    
 
   } catch (error) {
     core.setFailed(error.message);
