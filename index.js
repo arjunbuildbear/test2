@@ -339,7 +339,7 @@ async function executeDeploy(deployCmd) {
 
         console.log('='.repeat(100));
         // Print final summary for all deployments
-        console.log('\n\n🚀 DEPLOYMENT SUMMARY');
+        console.log('\n\n🚀🚀 DEPLOYMENT SUMMARY');
         console.log('='.repeat(100));
     
         allDeployments.forEach((deployment, index) => {
@@ -358,8 +358,12 @@ async function executeDeploy(deployCmd) {
           
           if (deployment.deployments && deployment.deployments.receipts) {
             deployment.deployments.receipts.forEach((receipt, idx) => {
+              const transaction = deploymentData.transactions.find(
+                tx => tx.contractAddress?.toLowerCase() === receipt.contractAddress?.toLowerCase()
+              );
+              const contractName = transaction ? transaction.contractName : 'Unknown Contract';
 
-              console.log(`\n${idx + 1}. Contract Address: ${receipt.contractAddress || 'N/A'     (receipt.contractName)}`);
+              console.log(`\n${idx + 1}. ${contractName}: ${receipt.contractAddress || 'N/A'}`);
               console.log(`   Transaction Hash: ${receipt.transactionHash}`);
               console.log(`   Block Number: ${receipt.blockNumber}`);
               console.log(`   Gas Used: ${receipt.gasUsed}`);
