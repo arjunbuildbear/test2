@@ -4,6 +4,8 @@ const { default: axios } = require('axios');
 const { exec } = require('child_process');
 const { randomBytes } = require('crypto');
 const util = require('util');
+const fs = require('fs').promises;
+const path = require('path');
 
 // Promisify exec for better async/await usage
 const execAsync = util.promisify(exec);
@@ -13,6 +15,28 @@ const DEFAULT_MNEMONIC = "test test test test test test test test test test test
 
 // Export mnemonic as environment variable
 core.exportVariable('MNEMONIC', DEFAULT_MNEMONIC);
+
+/**
+ * Recursively walks through directories
+ * @param {string} dir Directory to walk through
+ * @yields {Object} File entry information
+ */
+async function* walk(dir) {
+  const files = await fs.readdir(dir, { withFileTypes: true });
+  for (const file of files) {
+    const filePath = path.join(dir, file.name);
+    if (file.isDirectory()) {
+      yield* walk(filePath);
+    } else {
+      yield {
+        path: filePath,
+        name: file.name,
+        isFile: file.isFile(),
+        isDirectory: file.isDirectory()
+      };
+    }
+  }
+}
 
 /**
  * Creates a sandbox node and returns the BuildBear RPC URL.
@@ -46,9 +70,101 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
 
   // Export RPC URL as environment variable for later use
   core.exportVariable('BUILDBEAR_RPC_URL', url);
-
-  return url;
+  return { url, sandboxId };
 }
+
+/**
+ * Processes deployment data from broadcast and build directories
+ * @param {string} sandboxId Sandbox identifier
+ * @param {number} chainId Chain identifier
+ * @param {number} blockNumber Block number
+ * @param {string} chainName Chain name
+ * @returns {Object} Processed deployment data
+ */
+async function processDeploymentData(sandboxId, chainId, blockNumber, chainName) {
+  const broadcastDir = await findDirectory('broadcast');
+  const buildDir = broadcastDir ? broadcastDir.replace('broadcast', 'build') : null;
+  
+  console.log(`Processing deployment data for chain ${chainName} (${chainId})`);
+  console.log(`Build directory: ${buildDir}`);
+
+  const eventAbi = await collectEventAbi(buildDir);
+  const deploymentData = await collectDeploymentData(broadcastDir, chainId, sandboxId, chainId, blockNumber, eventAbi);
+
+  return deploymentData;
+}
+
+/**
+ * Finds a specific directory in the project
+ * @param {string} targetDir Directory name to find
+ * @returns {Promise<string|null>} Path to directory or null
+ */
+async function findDirectory(targetDir) {
+  for await (const entry of walk(".")) {
+    if (entry.isDirectory && entry.name === targetDir) {
+      return entry.path;
+    }
+  }
+  return null;
+}
+
+/**
+ * Collects event ABI from build files
+ * @param {string} buildDir Build directory path
+ * @returns {Promise<Array>} Array of event ABIs
+ */
+async function collectEventAbi(buildDir) {
+  const eventAbi = [];
+  if (buildDir) {
+    for await (const entry of walk(buildDir)) {
+      if (entry.isFile && entry.name.endsWith(".json")) {
+        const buildJson = JSON.parse(await fs.readFile(entry.path, 'utf8'));
+        if (Array.isArray(buildJson.abi)) {
+          eventAbi.push(...buildJson.abi.filter(x => x.type === "event"));
+        }
+      }
+    }
+  }
+  return eventAbi;
+}
+
+/**
+ * Formats deployment data for GitHub comment
+ * @param {Object} deploymentData Deployment information
+ * @returns {string} Formatted markdown string
+ */
+function formatDeploymentComment(deploymentData) {
+  let comment = '## Deployment Summary\n\n';
+  
+  Object.entries(deploymentData).forEach(([chainName, data]) => {
+    comment += `### Chain: ${chainName}\n`;
+    comment += `- **Chain ID**: ${data.chainId}\n`;
+    comment += `- **RPC URL**: ${data.rpcUrl}\n`;
+    comment += `- **Block Number**: ${data.blockNumber}\n\n`;
+
+    comment += '#### Deployed Contracts\n';
+    data.deployments.transactions.forEach((tx, index) => {
+      const receipt = data.deployments.receipts[index];
+      if (receipt) {
+        comment += `- **Transaction**: ${tx.hash}\n`;
+        comment += `  - Contract Address: ${receipt.contractAddress || 'N/A'}\n`;
+        comment += `  - Block Number: ${receipt.blockNumber}\n`;
+        if (receipt.decodedLogs) {
+          comment += '  - Events:\n';
+          receipt.decodedLogs.forEach(log => {
+            if (log) {
+              comment += `    - ${log.eventName}\n`;
+            }
+          });
+        }
+        comment += '\n';
+      }
+    });
+  });
+
+  return comment;
+}
+
 
 /**
  * Checks if the node is ready by continuously polling for status.
@@ -139,6 +255,15 @@ async function executeDeploy(deployCmd) {
         console.error(`Node is not live for URL: ${url}. Skipping deployment.`);
       }
     }
+
+    const deploymentData = await processDeploymentData(
+          sandboxId,
+          net.chainId,
+          net.blockNumber,
+          net.name || `Chain-${net.chainId}`
+        );
+        
+        allDeployments[net.chainId] = deploymentData;
 
   } catch (error) {
     core.setFailed(error.message);
