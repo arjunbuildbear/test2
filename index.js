@@ -232,6 +232,7 @@ async function executeDeploy(deployCmd) {
     const deployCmd = core.getInput('deployCmd');
     const repoName = github.context.repo.repo; // Get repository name
     const commitHash = github.context.sha; // Get commit hash
+    const allDeployments = {};
 
     console.log('Network details:', network);
     console.log(`Deploy command: ${deployCmd}`);
@@ -255,14 +256,8 @@ async function executeDeploy(deployCmd) {
 
         // Execute the deploy command after node becomes live
         await executeDeploy(deployCmd);
-        core.setOutput('deployments', "here deployments details come");
         
-      } else {
-        console.error(`Node is not live for URL: ${rpcUrl}. Skipping deployment.`);
-      }
-    }
-
-    const deploymentData = await processDeploymentData(
+      const deploymentData = await processDeploymentData(
           sandboxId,
           net.chainId,
           net.blockNumber,
@@ -270,6 +265,18 @@ async function executeDeploy(deployCmd) {
         );
         
         allDeployments[net.chainId] = deploymentData;
+        
+      } else {
+        console.error(`Node is not live for URL: ${rpcUrl}. Skipping deployment.`);
+      }
+    
+    }
+
+ const formattedComment = formatDeploymentComment(allDeployments);
+    core.setOutput('deployment_comment', formattedComment);
+    console.log('Deployment summary:', formattedComment);
+
+    
 
   } catch (error) {
     core.setFailed(error.message);
