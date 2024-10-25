@@ -258,43 +258,6 @@ async function executeDeploy(deployCmd) {
 }
 
 
-/**
- * Creates a comment on the commit
- * @param {string} comment Comment content in markdown
- */
-async function createCommitComment(comment) {
-  try {
-    // Use the default GITHUB_TOKEN provided by Actions
-    const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
-    
-    // Get PR number if this is a pull request
-    const prNumber = github.context.payload.pull_request?.number;
-    
-    if (prNumber) {
-      // Comment on PR
-      await octokit.rest.issues.createComment({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        issue_number: prNumber,
-        body: comment
-      });
-      console.log(`Created comment on PR #${prNumber}`);
-    } else {
-      // Comment on commit
-      await octokit.rest.repos.createCommitComment({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        commit_sha: github.context.sha,
-        body: comment
-      });
-      console.log(`Created comment on commit ${github.context.sha}`);
-    }
-  } catch (error) {
-    console.error('Error creating comment:', error);
-    core.warning(`Failed to create deployment comment: ${error.message}`);
-  }
-}
-
 (async () => {
   try {
     // Get the input values
@@ -305,6 +268,9 @@ async function createCommitComment(comment) {
 
     console.log('Network details:', network);
     console.log(`Deploy command: ${deployCmd}`);
+
+    // Initialize array to store all deployments
+    const allDeployments = [];
 
     // Loop through the network and create nodes
     for (const net of network) {
@@ -329,6 +295,8 @@ async function createCommitComment(comment) {
         // Process broadcast directory
         const deploymentData = await processBroadcastDirectory(net.chainId);
 
+     
+
         // Set deployment details as output
         const deploymentDetails = {
           chainId: net.chainId,
@@ -338,27 +306,30 @@ async function createCommitComment(comment) {
           deployments: deploymentData
         };
 
-        console.log('\nDeployment Summary:');
-        console.log('==================');
-        console.log(`Chain ID: ${net.chainId}`);
-        console.log(`RPC URL: ${rpcUrl}`);
-        console.log(`Sandbox ID: ${sandboxId}`);
-        console.log('\nDeployed Contracts:');
-        if (deploymentData) {
-          deploymentData.receipts.forEach((receipt, index) => {
-            console.log(`\n${index + 1}. Contract Address: ${receipt.contractAddress || 'N/A'}`);
-            console.log(`   Transaction Hash: ${receipt.transactionHash}`);
-            console.log(`   Block Number: ${receipt.blockNumber}`);
-            if (receipt.decodedLogs) {
-              console.log('   Events:');
-              receipt.decodedLogs.forEach(log => {
-                if (log) {
-                  console.log(`   - ${log.eventName}`);
-                }
-              });
-            }
-          });
-        }
+           // Add to deployments array
+           allDeployments.push(deploymentDetails);
+
+        // console.log('\nDeployment Summary:');
+        // console.log('==================');
+        // console.log(`Chain ID: ${net.chainId}`);
+        // console.log(`RPC URL: ${rpcUrl}`);
+        // console.log(`Sandbox ID: ${sandboxId}`);
+        // console.log('\nDeployed Contracts:');
+        // if (deploymentData) {
+        //   deploymentData.receipts.forEach((receipt, index) => {
+        //     console.log(`\n${index + 1}. Contract Address: ${receipt.contractAddress || 'N/A'}`);
+        //     console.log(`   Transaction Hash: ${receipt.transactionHash}`);
+        //     console.log(`   Block Number: ${receipt.blockNumber}`);
+        //     if (receipt.decodedLogs) {
+        //       console.log('   Events:');
+        //       receipt.decodedLogs.forEach(log => {
+        //         if (log) {
+        //           console.log(`   - ${log.eventName}`);
+        //         }
+        //       });
+        //     }
+        //   });
+        // }
 
 
       } else {
@@ -367,7 +338,46 @@ async function createCommitComment(comment) {
 
     }
 
-    createCommitComment("helloooo")
+        // Print final summary for all deployments
+        console.log('\n\n🚀 DEPLOYMENT SUMMARY');
+        console.log('='.repeat(50));
+    
+        allDeployments.forEach((deployment, index) => {
+          console.log(`\nChain ID: ${deployment.chainId}`);
+          
+          if (deployment.status === 'failed') {
+            console.log(`Status: ❌ Failed`);
+            console.log(`Error: ${deployment.error}`);
+            console.log('='.repeat(50));
+            return;
+          }
+    
+          console.log(`Sandbox ID: ${deployment.sandboxId}`);
+          console.log(`RPC URL: ${deployment.rpcUrl}`);
+          console.log('\nDeployed Contracts:');
+          
+          if (deployment.deployments && deployment.deployments.receipts) {
+            deployment.deployments.receipts.forEach((receipt, idx) => {
+              console.log(`\n${idx + 1}. Contract Address: ${receipt.contractAddress || 'N/A'}`);
+              console.log(`   Transaction Hash: ${receipt.transactionHash}`);
+              console.log(`   Block Number: ${receipt.blockNumber}`);
+              
+              if (receipt.decodedLogs) {
+                console.log('   Events:');
+                receipt.decodedLogs.forEach(log => {
+                  if (log) {
+                    console.log(`   - ${log.eventName}`);
+                  }
+                });
+              }
+            });
+          }
+    
+          // Add separator between deployments
+          if (index < allDeployments.length - 1) {
+            console.log('\n' + '='.repeat(50));
+          }
+        });
 
   } catch (error) {
     core.setFailed(error.message);
