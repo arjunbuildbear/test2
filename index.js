@@ -358,7 +358,7 @@ async function executeDeploy(deployCmd) {
           
           if (deployment.deployments && deployment.deployments.receipts) {
             deployment.deployments.receipts.forEach((receipt, idx) => {
-              const transaction = deploymentData.transactions.find(
+              const transaction = deployment.deployments.transactions.find(
                 tx => tx.contractAddress?.toLowerCase() === receipt.contractAddress?.toLowerCase()
               );
               const contractName = transaction ? transaction.contractName : 'Unknown Contract';
