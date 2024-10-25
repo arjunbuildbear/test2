@@ -238,10 +238,16 @@ async function executeDeploy(deployCmd) {
 
     // Loop through the network and create nodes
     for (const net of network) {
-      const url = await createNode(repoName, commitHash, net.chainId, net.blockNumber);
+        // Create node
+        const { url: rpcUrl, sandboxId } = await createNode(
+          repoName,
+          commitHash,
+          net.chainId,
+          net.blockNumber
+        );
 
       // Check if the node is live by continuously checking until successful or max retries
-      const isNodeLive = await checkNodeLiveness(url);
+      const isNodeLive = await checkNodeLiveness(rpcUrl);
       if (isNodeLive) {
         // 5 seconds delay before logging the URL
         setTimeout(() => {
