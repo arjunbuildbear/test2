@@ -257,6 +257,44 @@ async function executeDeploy(deployCmd) {
   }
 }
 
+
+/**
+ * Creates a comment on the commit
+ * @param {string} comment Comment content in markdown
+ */
+async function createCommitComment(comment) {
+  try {
+    // Use the default GITHUB_TOKEN provided by Actions
+    const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+    
+    // Get PR number if this is a pull request
+    const prNumber = github.context.payload.pull_request?.number;
+    
+    if (prNumber) {
+      // Comment on PR
+      await octokit.rest.issues.createComment({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        issue_number: prNumber,
+        body: comment
+      });
+      console.log(`Created comment on PR #${prNumber}`);
+    } else {
+      // Comment on commit
+      await octokit.rest.repos.createCommitComment({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        commit_sha: github.context.sha,
+        body: comment
+      });
+      console.log(`Created comment on commit ${github.context.sha}`);
+    }
+  } catch (error) {
+    console.error('Error creating comment:', error);
+    core.warning(`Failed to create deployment comment: ${error.message}`);
+  }
+}
+
 (async () => {
   try {
     // Get the input values
@@ -328,6 +366,8 @@ async function executeDeploy(deployCmd) {
       }
 
     }
+
+    createCommitComment("helloooo")
 
   } catch (error) {
     core.setFailed(error.message);
