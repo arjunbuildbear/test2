@@ -74,8 +74,6 @@ async function processBroadcastDirectory(chainId) {
     }
 
     const buildDir = path.join(process.cwd(), 'build');
-    console.log(`Broadcast directory: ${broadcastDir}`);
-    console.log(`Build directory: ${buildDir}`);
 
     // Process event ABIs from build directory
     const eventAbi = [];
@@ -83,7 +81,6 @@ async function processBroadcastDirectory(chainId) {
       for await (const entry of walk(buildDir)) {
         if (entry.isFile && entry.name.endsWith('.json')) {
           const content = await fs.readFile(entry.path, 'utf8');
-          console.log("CONTENT")
           const buildJson = JSON.parse(content);
           if (Array.isArray(buildJson.abi)) {
             eventAbi.push(...buildJson.abi.filter(x => x.type === "event"));
@@ -190,9 +187,6 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
 
   await axios.post(url, data);
 
-  console.log(`Created sandbox ID: ${sandboxId}`);
-  console.log(`BuildBear RPC URL: ${url}`);
-
   // Export RPC URL as environment variable for later use
   core.exportVariable('BUILDBEAR_RPC_URL', url);
   return { url, sandboxId };
@@ -217,16 +211,14 @@ async function checkNodeLiveness(url, maxRetries = 10, delay = 5000) {
         params: []
       });
 
-      console.log(resp.status, resp.data)
-
       // Check if status is 200 and if result is absent
       if (resp.status === 200 && resp.data.result) {
-        console.log(`Node is live: ${url}`);
+        console.log(`Sandbox is live: ${url}`);
         return true;
       }
     } catch (error) {
       console.log(error)
-      console.error(`Attempt ${attempts + 1}: Node is not live yet. Retrying...`);
+      console.error(`Attempt ${attempts + 1}: Sandbox is not live yet. Retrying...`);
     }
 
     // Wait for the specified delay before the next attempt
@@ -274,6 +266,10 @@ async function executeDeploy(deployCmd) {
 
     // Loop through the network and create nodes
     for (const net of network) {
+
+      console.log(`\n🔄 Processing network with chainId: ${net.chainId}`);
+
+
       // Create node
       const { url: rpcUrl, sandboxId } = await createNode(
         repoName,
@@ -284,7 +280,10 @@ async function executeDeploy(deployCmd) {
 
       // Check if the node is live by continuously checking until successful or max retries
       const isNodeLive = await checkNodeLiveness(rpcUrl);
+
       if (isNodeLive) {
+
+        console.log(`\n📄 Executing deployment for chainId ${net.chainId}`);
         // 5 seconds delay before logging the URL
         setTimeout(() => {
         }, 5000);
@@ -338,9 +337,10 @@ async function executeDeploy(deployCmd) {
 
     }
 
+        console.log('='.repeat(100));
         // Print final summary for all deployments
         console.log('\n\n🚀 DEPLOYMENT SUMMARY');
-        console.log('='.repeat(50));
+        console.log('='.repeat(100));
     
         allDeployments.forEach((deployment, index) => {
           console.log(`\nChain ID: ${deployment.chainId}`);
@@ -348,7 +348,7 @@ async function executeDeploy(deployCmd) {
           if (deployment.status === 'failed') {
             console.log(`Status: ❌ Failed`);
             console.log(`Error: ${deployment.error}`);
-            console.log('='.repeat(50));
+            console.log('='.repeat(100));
             return;
           }
     
@@ -358,24 +358,19 @@ async function executeDeploy(deployCmd) {
           
           if (deployment.deployments && deployment.deployments.receipts) {
             deployment.deployments.receipts.forEach((receipt, idx) => {
-              console.log(`\n${idx + 1}. Contract Address: ${receipt.contractAddress || 'N/A'}`);
+
+              console.log(`\n${idx + 1}. Contract Address: ${receipt.contractAddress || 'N/A'     (receipt.contractName)}`);
               console.log(`   Transaction Hash: ${receipt.transactionHash}`);
               console.log(`   Block Number: ${receipt.blockNumber}`);
-              
-              if (receipt.decodedLogs) {
-                console.log('   Events:');
-                receipt.decodedLogs.forEach(log => {
-                  if (log) {
-                    console.log(`   - ${log.eventName}`);
-                  }
-                });
-              }
+              console.log(`   Gas Used: ${receipt.gasUsed}`);
+              console.log(`   Cumulative Gas Used : ${receipt.cumulativeGasUsed}`);
+              console.log(`   Effective Gas Price : ${receipt.effectiveGasPrice}`);
             });
           }
     
           // Add separator between deployments
           if (index < allDeployments.length - 1) {
-            console.log('\n' + '='.repeat(50));
+            console.log('\n' + '='.repeat(100));
           }
         });
 
