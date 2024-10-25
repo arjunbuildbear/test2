@@ -251,7 +251,6 @@ async function executeDeploy(deployCmd) {
       if (isNodeLive) {
         // 5 seconds delay before logging the URL
         setTimeout(() => {
-          console.log(`Node created with URL: ${url}`);
         }, 5000);
 
         // Execute the deploy command after node becomes live
