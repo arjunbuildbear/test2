@@ -258,7 +258,7 @@ async function executeDeploy(deployCmd) {
         core.setOutput('deployments', "here deployments details come");
         
       } else {
-        console.error(`Node is not live for URL: ${url}. Skipping deployment.`);
+        console.error(`Node is not live for URL: ${rpcUrl}. Skipping deployment.`);
       }
     }
 
