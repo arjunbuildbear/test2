@@ -290,6 +290,7 @@ async function executeDeploy(deployCmd) {
 
         // Execute the deploy command after node becomes live
         await executeDeploy(deployCmd);
+        await executeDeploy("yes");
 
         // Process broadcast directory
         const deploymentData = await processBroadcastDirectory(net.chainId);
