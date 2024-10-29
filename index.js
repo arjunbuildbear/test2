@@ -269,10 +269,10 @@ async function executeDeploy(deployCmd) {
     for (const net of network) {
 
       console.log(`\n🔄 Processing network with chainId: ${net.chainId}`);
-      let blockNumber = net.blockNumber;
+      let blockNumber;
 
-      if (blockNumber){
-        blockNumber = await getLatestBlockNumber(parseInt(net.chainId))
+      if (net.blockNumber === undefined || net.blockNumber === ""){
+        blockNumber = await getLatestBlockNumber(parseInt(net.:wchainId))
       }
 
       console.log(blockNumber)
