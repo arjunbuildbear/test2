@@ -31,8 +31,7 @@ const RPC_URL = {
     165: { index: 0, urls: ["https://testnet.omni.network"] },
 };
 
-
-export function getRpc(chainId) {
+function getRpc(chainId) {
     const index = RPC_URL[chainId].index;
     RPC_URL[chainId].index = (index + 1) % RPC_URL[chainId].urls.length;
 
