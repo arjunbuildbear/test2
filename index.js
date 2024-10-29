@@ -272,7 +272,8 @@ async function executeDeploy(deployCmd) {
       let blockNumber;
 
       if (net.blockNumber === undefined || net.blockNumber === ""){
-        blockNumber = await getLatestBlockNumber(parseInt(net.:wchainId))
+        blockNumber = await getLatestBlockNumber(parseInt(net.chainId))
+         console.log(blockNumber)
       }
 
       console.log(blockNumber)
