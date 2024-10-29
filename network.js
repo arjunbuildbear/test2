@@ -70,7 +70,6 @@ async function getLatestBlockNumber(chainId) {
     }
 }
 
-
 // Export the function correctly
 module.exports = {
     getLatestBlockNumber,

@@ -275,12 +275,13 @@ async function executeDeploy(deployCmd) {
         blockNumber = getLatestBlockNumber(parseInt(net.chainId))
       }
 
+      console.log(blockNumber)
       // Create node
       const { url: rpcUrl, sandboxId } = await createNode(
         repoName,
         commitHash,
         net.chainId,
-        net.blockNumber
+        blockNumber
       );
 
       // Check if the node is live by continuously checking until successful or max retries
@@ -295,7 +296,6 @@ async function executeDeploy(deployCmd) {
 
         // Execute the deploy command after node becomes live
         await executeDeploy(deployCmd);
-        await executeDeploy("yes");
 
         // Process broadcast directory
         const deploymentData = await processBroadcastDirectory(net.chainId);
