@@ -39,7 +39,7 @@ function getRpc(chainId) {
     return url;
 }
 
-export async function getLatestBlockNumber(chainId) {
+async function getLatestBlockNumber(chainId) {
     const url = getRpc(chainId)
 
     const requestData = {
@@ -69,3 +69,9 @@ export async function getLatestBlockNumber(chainId) {
         throw error;
     }
 }
+
+
+// Export the function correctly
+module.exports = {
+    getLatestBlockNumber,
+};
