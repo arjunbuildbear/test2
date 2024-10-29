@@ -6,6 +6,7 @@ const { randomBytes } = require('crypto');
 const util = require('util');
 const fs = require('fs').promises;
 const path = require('path');
+const { getLatestBlockNumber } = require('./network');
 
 // Promisify exec for better async/await usage
 const execAsync = util.promisify(exec);
@@ -268,7 +269,11 @@ async function executeDeploy(deployCmd) {
     for (const net of network) {
 
       console.log(`\n🔄 Processing network with chainId: ${net.chainId}`);
+      let blockNumber = net.blockNumber;
 
+      if (blockNumber){
+        blockNumber = getLatestBlockNumber(parseInt(net.chainId))
+      }
 
       // Create node
       const { url: rpcUrl, sandboxId } = await createNode(
@@ -308,29 +313,6 @@ async function executeDeploy(deployCmd) {
 
            // Add to deployments array
            allDeployments.push(deploymentDetails);
-
-        // console.log('\nDeployment Summary:');
-        // console.log('==================');
-        // console.log(`Chain ID: ${net.chainId}`);
-        // console.log(`RPC URL: ${rpcUrl}`);
-        // console.log(`Sandbox ID: ${sandboxId}`);
-        // console.log('\nDeployed Contracts:');
-        // if (deploymentData) {
-        //   deploymentData.receipts.forEach((receipt, index) => {
-        //     console.log(`\n${index + 1}. Contract Address: ${receipt.contractAddress || 'N/A'}`);
-        //     console.log(`   Transaction Hash: ${receipt.transactionHash}`);
-        //     console.log(`   Block Number: ${receipt.blockNumber}`);
-        //     if (receipt.decodedLogs) {
-        //       console.log('   Events:');
-        //       receipt.decodedLogs.forEach(log => {
-        //         if (log) {
-        //           console.log(`   - ${log.eventName}`);
-        //         }
-        //       });
-        //     }
-        //   });
-        // }
-
 
       } else {
         console.error(`Node is not live for URL: ${rpcUrl}. Skipping deployment.`);
