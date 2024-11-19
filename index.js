@@ -267,13 +267,17 @@ async function executeDeploy(deployCmd) {
 
     // Loop through the network and create nodes
     for (const net of network) {
-
       console.log(`\n🔄 Processing network with chainId: ${net.chainId}`);
       let blockNumber;
 
-      if (net.blockNumber === undefined || net.blockNumber === ""){
-        blockNumber = await getLatestBlockNumber(parseInt(net.chainId))
-         console.log(blockNumber)
+       if (net.blockNumber === undefined) {
+        // If blockNumber is not present in the network object, retrieve the latest block number
+        blockNumber = await getLatestBlockNumber(parseInt(net.chainId));
+        console.log(`Latest block number for chainId ${net.chainId}: ${blockNumber}`);
+      } else {
+        // If blockNumber is present in the network object, use it
+        blockNumber = net.blockNumber;
+        console.log(`Using provided block number: ${blockNumber}`);
       }
 
       console.log(blockNumber)
