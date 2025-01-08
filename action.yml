@@ -1,16 +1,20 @@
-name: 'bb_action_ci'
-description: 'BB'
+name: 'test_ci'
+description: 'test'
 
 inputs:
   network:
-    description: 'List of networks you want to deploy on'
+    description: "List of networks you want to deploy on"
     required: true
-  deployCmd:
-    description: 'Command to deploy the contract'
+  deploy-command:
+    description: "Command to deploy the contract"
     required: true
-  buildbear_token: 
+  buildbear-token:
     description: "Buildbear API token"
     required: true
+  working-directory:
+    description: "Project directory"
+    required: false
+    default: "."
 
 outputs:
   deployments:
