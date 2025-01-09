@@ -260,6 +260,24 @@ async function executeDeploy(deployCmd, workingDir) {
   await promise;
 }
 
+/**
+ * Sends a Slack notification.
+ *
+ * @param {string} webhookUrl - The Slack webhook URL.
+ * @param {string} message - The message to send.
+ */
+async function sendSlackNotification(webhookUrl, message) {
+  try {
+    await axios.post(webhookUrl, {
+      text: message,
+    });
+    console.log("Slack notification sent.");
+  } catch (error) {
+    console.error("Error sending Slack notification:", error);
+  }
+}
+
+
 (async () => {
   try {
     // Get the input values
@@ -271,6 +289,7 @@ async function executeDeploy(deployCmd, workingDir) {
         required: false,
       }),
     );
+     const slackWebhookUrl = core.getInput("slack-webhook-url", { required: false });
     const repoName = github.context.repo.repo; // Get repository name
     const commitHash = github.context.sha; // Get commit hash
 
@@ -390,7 +409,26 @@ async function executeDeploy(deployCmd, workingDir) {
         console.log("\n" + "=".repeat(100));
       }
     });
+
+    let summaryMessage = `🚀 Deployment Summary:\n`;
+    allDeployments.forEach((deployment, index) => {
+      summaryMessage += `\n*Chain ID:* ${deployment.chainId}\n*Sandbox ID:* ${deployment.sandboxId}\n*RPC URL:* ${deployment.rpcUrl}`;
+    });
+
+    if (slackWebhookUrl) {
+      const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
+      const slackMessage = `Deployment Completed!\nView the action here: ${githubActionUrl}\n\n${summaryMessage}`;
+      await sendSlackNotification(slackWebhookUrl, slackMessage);
+    }
   } catch (error) {
+       // Send error notification
+    const slackWebhookUrl = core.getInput("slack-webhook-url", { required: false });
+    if (slackWebhookUrl) {
+      const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
+      const errorMessage = `❌ Deployment Failed!\nError: ${error.message}\nView the action here: ${githubActionUrl}`;
+      await sendSlackNotification(slackWebhookUrl, errorMessage);
+    }
+
     core.setFailed(error.message);
   }
 })();
