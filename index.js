@@ -262,13 +262,13 @@ async function executeDeploy(deployCmd, workingDir) {
 
 /**
  * Sends deployment notification to the backend service
- * @param {string} notificationEndpoint - The backend endpoint URL
  * @param {Object} deploymentData - The deployment data to send
  */
 async function sendNotificationToBackend(deploymentData) {
   try {
     const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
-    const notificationEndpoint = "https://backend.alpha.buildbear.io/internal/ci/notify"
+    const notificationEndpoint =
+      "https://backend.alpha.buildbear.io/internal/ci/notify";
     const payload = {
       repositoryName: github.context.repo.repo,
       repositoryOwner: github.context.repo.owner,
@@ -278,7 +278,7 @@ async function sendNotificationToBackend(deploymentData) {
       status: deploymentData.status,
       summary: deploymentData.summary ?? "",
       deployments: deploymentData.deployments ?? "",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     await axios.post(notificationEndpoint, payload);
@@ -289,13 +289,12 @@ async function sendNotificationToBackend(deploymentData) {
   }
 }
 
-
 (async () => {
   try {
-      let deploymentNotificationData = {
-        status: 'deployment started'
-      };
-      await sendNotificationToBackend(deploymentNotificationData);
+    let deploymentNotificationData = {
+      status: "deployment started",
+    };
+    await sendNotificationToBackend(deploymentNotificationData);
     // Get the input values
     const network = JSON.parse(core.getInput("network", { required: true }));
     const deployCmd = core.getInput("deploy-command", { required: true });
@@ -425,26 +424,19 @@ async function sendNotificationToBackend(deploymentData) {
       }
     });
 
-    let summaryMessage = `🚀 Deployment Summary:\n`;
-    allDeployments.forEach((deployment, index) => {
-      summaryMessage += `\n*Chain ID:* ${deployment.chainId}\n*Sandbox ID:* ${deployment.sandboxId}\n*RPC URL:* ${deployment.rpcUrl}`;
-    });
-   
-
     deploymentNotificationData = {
-        status: 'success',
-        summary: summaryMessage,
-        deployments: allDeployments
-      };
-      await sendNotificationToBackend(deploymentNotificationData);
-
+      status: "success",
+      summary: summaryMessage,
+      deployments: allDeployments,
+    };
+    await sendNotificationToBackend(deploymentNotificationData);
   } catch (error) {
     let deploymentNotificationData = {
-        status: 'failed',
-        summary: `Deployment failed: ${error.message}`,
-        deployments: []
-      };
-      await sendNotificationToBackend(deploymentNotificationData);
+      status: "failed",
+      summary: `Deployment failed: ${error.message}`,
+      deployments: [],
+    };
+    await sendNotificationToBackend(deploymentNotificationData);
 
     core.setFailed(error.message);
   }
