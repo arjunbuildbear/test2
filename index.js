@@ -426,8 +426,7 @@ async function sendNotificationToBackend(deploymentData) {
 
     deploymentNotificationData = {
       status: "success",
-      summary: summaryMessage,
-      deployments: allDeployments,
+      deployments: allDeployments
     };
     await sendNotificationToBackend(deploymentNotificationData);
   } catch (error) {
