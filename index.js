@@ -292,10 +292,10 @@ async function sendNotificationToBackend(deploymentData) {
 
 (async () => {
   try {
-       const deploymentData = {
+      let deploymentNotificationData = {
         status: 'deployment started'
       };
-      await sendNotificationToBackend(deploymentData);
+      await sendNotificationToBackend(deploymentNotificationData);
     // Get the input values
     const network = JSON.parse(core.getInput("network", { required: true }));
     const deployCmd = core.getInput("deploy-command", { required: true });
@@ -431,20 +431,20 @@ async function sendNotificationToBackend(deploymentData) {
     });
    
 
-    const deploymentData = {
+    deploymentNotificationData = {
         status: 'success',
         summary: summaryMessage,
         deployments: allDeployments
       };
-      await sendNotificationToBackend(deploymentData);
+      await sendNotificationToBackend(deploymentNotificationData);
 
   } catch (error) {
-   const deploymentData = {
+    let deploymentNotificationData = {
         status: 'failed',
         summary: `Deployment failed: ${error.message}`,
         deployments: []
       };
-      await sendNotificationToBackend(deploymentData);
+      await sendNotificationToBackend(deploymentNotificationData);
 
     core.setFailed(error.message);
   }
