@@ -268,7 +268,7 @@ async function executeDeploy(deployCmd, workingDir) {
 async function sendNotificationToBackend(deploymentData) {
   try {
     const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
-    const notificationEndpoint = "https://c5ab86d1-1b4a-4305-88c6-b1ebca457e52.mock.pstmn.io"
+    const notificationEndpoint = "https://8f6a8c4e-a57e-42d3-9ef5-68443120ca3e.mock.pstmn.io"
     const payload = {
       repositoryName: github.context.repo.repo,
       repositoryOwner: github.context.repo.owner,
