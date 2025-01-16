@@ -261,25 +261,41 @@ async function executeDeploy(deployCmd, workingDir) {
 }
 
 /**
- * Sends a Slack notification.
- *
- * @param {string} webhookUrl - The Slack webhook URL.
- * @param {string} message - The message to send.
+ * Sends deployment notification to the backend service
+ * @param {string} notificationEndpoint - The backend endpoint URL
+ * @param {Object} deploymentData - The deployment data to send
  */
-async function sendSlackNotification(webhookUrl, message) {
+async function sendNotificationToBackend(deploymentData) {
   try {
-    await axios.post(webhookUrl, {
-      text: message,
-    });
-    console.log("Slack notification sent.");
+    const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
+    const notificationEndpoint = "https://c5ab86d1-1b4a-4305-88c6-b1ebca457e52.mock.pstmn.io"
+    const payload = {
+      repositoryName: github.context.repo.repo,
+      repositoryOwner: github.context.repo.owner,
+      actionUrl: githubActionUrl,
+      commitHash: github.context.sha,
+      workflow: github.context.workflow,
+      status: deploymentData.status,
+      summary: deploymentData.summary ?? "",
+      deployments: deploymentData.deployments ?? "",
+      timestamp: new Date().toISOString()
+    };
+
+    await axios.post(notificationEndpoint, payload);
+    console.log("Notification sent to backend service successfully.");
   } catch (error) {
-    console.error("Error sending Slack notification:", error);
+    console.error("Error sending notification to backend:", error.message);
+    // Don't throw error to prevent action failure due to notification issues
   }
 }
 
 
 (async () => {
   try {
+       const deploymentData = {
+        status: 'deployment started'
+      };
+      await sendNotificationToBackend(deploymentData);
     // Get the input values
     const network = JSON.parse(core.getInput("network", { required: true }));
     const deployCmd = core.getInput("deploy-command", { required: true });
@@ -289,7 +305,6 @@ async function sendSlackNotification(webhookUrl, message) {
         required: false,
       }),
     );
-     const slackWebhookUrl = core.getInput("slack-webhook-url", { required: false });
     const repoName = github.context.repo.repo; // Get repository name
     const commitHash = github.context.sha; // Get commit hash
 
@@ -414,20 +429,22 @@ async function sendSlackNotification(webhookUrl, message) {
     allDeployments.forEach((deployment, index) => {
       summaryMessage += `\n*Chain ID:* ${deployment.chainId}\n*Sandbox ID:* ${deployment.sandboxId}\n*RPC URL:* ${deployment.rpcUrl}`;
     });
+   
 
-    if (slackWebhookUrl) {
-      const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
-      const slackMessage = `Deployment Completed!\nView the action here: ${githubActionUrl}\n\n${summaryMessage}`;
-      await sendSlackNotification(slackWebhookUrl, slackMessage);
-    }
+    const deploymentData = {
+        status: 'success',
+        summary: summaryMessage,
+        deployments: allDeployments
+      };
+      await sendNotificationToBackend(deploymentData);
+
   } catch (error) {
-       // Send error notification
-    const slackWebhookUrl = core.getInput("slack-webhook-url", { required: false });
-    if (slackWebhookUrl) {
-      const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
-      const errorMessage = `❌ Deployment Failed!\nError: ${error.message}\nView the action here: ${githubActionUrl}`;
-      await sendSlackNotification(slackWebhookUrl, errorMessage);
-    }
+   const deploymentData = {
+        status: 'failed',
+        summary: `Deployment failed: ${error.message}`,
+        deployments: []
+      };
+      await sendNotificationToBackend(deploymentData);
 
     core.setFailed(error.message);
   }
