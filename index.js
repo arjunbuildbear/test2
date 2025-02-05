@@ -267,20 +267,27 @@ async function executeDeploy(deployCmd, workingDir) {
 }
 
 function extractDeploymentData(deployments) {
-  // Ensure deployments is an array
-  if (!Array.isArray(deployments)) {
-    deployments = [deployments];
-  }
+ if (!Array.isArray(deployments)) {
+   deployments = [deployments];
+ }
 
-  return deployments.flatMap(deployment => {
-    return deployment.deployments.transactions.map(transaction => ({
-      chainId: deployment.chainId,
-      contractName: transaction.contractName,
-      contractAddress: transaction.contractAddress,
-      hash: transaction.hash,
-      rpcUrl: deployment.rpcUrl
-    }));
-  });
+ return deployments.reduce((acc, deployment) => {
+   if (!deployment?.deployments?.transactions) {
+     return acc;
+   }
+
+   const transactions = Array.isArray(deployment.deployments.transactions) 
+     ? deployment.deployments.transactions 
+     : [deployment.deployments.transactions];
+
+   return acc.concat(transactions.map(transaction => ({
+     chainId: deployment?.chainId,
+     contractName: transaction?.contractName,
+     contractAddress: transaction?.contractAddress,
+     hash: transaction?.hash,
+     rpcUrl: deployment?.rpcUrl
+   })));
+ }, []);
 }
 /**
  * Sends deployment notification to the backend service
