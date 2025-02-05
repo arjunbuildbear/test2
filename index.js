@@ -192,7 +192,9 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
       }
     });
 
-    core.exportVariable('BUILDBEAR_RPC_URL', url);
+    console.log(response.data)
+
+    core.exportVariable('BUILDBEAR_RPC_URL', response.data.rpcUrl);
     return { 
       rpcUrl: response.data.rpcUrl, 
       sandboxId 
