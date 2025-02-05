@@ -176,7 +176,7 @@ async function processBroadcastDirectory(chainId, workingDir) {
 async function createNode(repoName, commitHash, chainId, blockNumber) {
   const sandboxId = `${repoName}-${commitHash.slice(0, 8)}-${randomBytes(4).toString("hex")}`;
   const url = `https://api.dev.buildbear.io/v1/buildbear-sandbox`;
-  const bearerToken = process.env.BB_API_TOKEN;
+  const bearerToken = core.getInput("buildbear-token", { required: true })
 
   // const data = {
   //   jsonrpc: "2.0",
