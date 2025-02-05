@@ -269,6 +269,7 @@ async function executeDeploy(deployCmd, workingDir) {
 }
 
 const extractContractData = (data) => {
+  console.log(data)
   const arrayData = Array.isArray(data) ? data : [data]; // Ensure data is an array
 
   return arrayData.map((item) => ({
@@ -295,7 +296,7 @@ async function sendNotificationToBackend(deploymentData) {
     const notificationEndpoint =
       "https://8f6a8c4e-a57e-42d3-9ef5-68443120ca3e.mock.pstmn.io";
 
-    const deployments = extractContractData(deploymentData);
+    const deployments = extractContractData(deploymentData.deployments);
     const payload = {
       repositoryName: github.context.repo.repo,
       repositoryOwner: github.context.repo.owner,
