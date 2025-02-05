@@ -185,9 +185,12 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
       blockNumber: blockNumber ? Number(blockNumber) : undefined
     };
 
+    console.log(bearerToken)
+
     const response = await axios.post(url, data, {
       headers: {
-        'Authorization': `Bearer ${bearerToken}`
+        'Authorization': `Bearer ${bearerToken}`,
+        'Content-Type': 'application/json'
       }
     });
 
