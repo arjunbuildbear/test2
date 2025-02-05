@@ -174,42 +174,31 @@ async function processBroadcastDirectory(chainId, workingDir) {
  * @returns {string} - The BuildBear RPC URL for the sandbox node
  */
 async function createNode(repoName, commitHash, chainId, blockNumber) {
-  const sandboxId = `${repoName}-${commitHash.slice(0, 8)}-${randomBytes(4).toString("hex")}`;
-  const url = `https://api.dev.buildbear.io/v1/buildbear-sandbox`;
-  const bearerToken = core.getInput("buildbear-token", { required: true })
+  try {
+    const sandboxId = `${repoName}-${commitHash.slice(0, 8)}-${randomBytes(4).toString('hex')}`;
+    const url = 'https://api.dev.buildbear.io/v1/buildbear-sandbox';
+    const bearerToken = core.getInput('buildbear-token', { required: true });
 
-  console.log(bearerToken)
+    const data = {
+      chainId: Number(chainId),
+      nodeName: sandboxId.toString(),
+      blockNumber: blockNumber ? Number(blockNumber) : undefined
+    };
 
-  // const data = {
-  //   jsonrpc: "2.0",
-  //   id: 1,
-  //   method: "buildbearInternal_createNode",
-  //   params: [
-  //     {
-  //       fork: { id: chainId.toString(), blockNumber },
-  //       chainId: parseInt(chainId),
-  //     },
-  //   ],
-  // };
+    const response = await axios.post(url, data, {
+      headers: {
+        'Authorization': `Bearer ${bearerToken}`
+      }
+    });
 
-  const data = {
-  chainId: Number(chainId),
-  nodeName: sandboxId,
-  ...(blockNumber !== undefined && blockNumber !== null && blockNumber !== "" && { blockNumber: Number(blockNumber) }) // Only include blockNumber if it's not undefined, null, or an empty string
-};
+    // Only export RPC URL if request was successful
+    core.exportVariable('BUILDBEAR_RPC_URL', url);
+    return { url, sandboxId };
 
-
-  await axios.post(url, data, {
-  headers: {
-    'Authorization': `Bearer ${bearerToken}`,
-    'Content-Type': 'application/json'
+  } catch (error) {
+    console.error('Error creating node:', error.response?.data || error.message);
+    throw error;
   }
-});
-
-
-  // Export RPC URL as environment variable for later use
-  core.exportVariable("BUILDBEAR_RPC_URL", url);
-  return { url, sandboxId };
 }
 
 /**
