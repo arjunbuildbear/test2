@@ -175,21 +175,33 @@ async function processBroadcastDirectory(chainId, workingDir) {
  */
 async function createNode(repoName, commitHash, chainId, blockNumber) {
   const sandboxId = `${repoName}-${commitHash.slice(0, 8)}-${randomBytes(4).toString("hex")}`;
-  const url = `https://rpc-beta.buildbear.io/submit/${sandboxId}`;
+  const url = `https://api.dev.buildbear.io/v1/buildbear-sandbox`;
+  const bearerToken = process.env.BB_API_TOKEN;
+
+  // const data = {
+  //   jsonrpc: "2.0",
+  //   id: 1,
+  //   method: "buildbearInternal_createNode",
+  //   params: [
+  //     {
+  //       fork: { id: chainId.toString(), blockNumber },
+  //       chainId: parseInt(chainId),
+  //     },
+  //   ],
+  // };
 
   const data = {
-    jsonrpc: "2.0",
-    id: 1,
-    method: "buildbearInternal_createNode",
-    params: [
-      {
-        fork: { id: chainId.toString(), blockNumber },
-        chainId: parseInt(chainId),
-      },
-    ],
-  };
+    chainId: chainId,
+    nodeName: sandboxId, 
+    blockNumber: blockNumber ?? undefined
+  }
 
-  await axios.post(url, data);
+  await axios.post(url, data, {
+ headers: {
+   'Authorization': `Bearer ${bearerToken}`,
+   'Content-Type': 'application/json'
+ }
+});
 
   // Export RPC URL as environment variable for later use
   core.exportVariable("BUILDBEAR_RPC_URL", url);
