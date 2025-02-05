@@ -273,7 +273,7 @@ async function sendNotificationToBackend(deploymentData) {
   try {
     const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
     const notificationEndpoint =
-      "https://backend.alpha.buildbear.io/internal/ci/notify";
+      "https://8f6a8c4e-a57e-42d3-9ef5-68443120ca3e.mock.pstmn.io";
     const payload = {
       repositoryName: github.context.repo.repo,
       repositoryOwner: github.context.repo.owner,
