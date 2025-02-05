@@ -274,16 +274,17 @@ const extractContractData = (data) => {
   return arrayData.map((item) => ({
     chainId: item.chainId || null,
     rpcUrl: item.rpcUrl || null,
-    transactions: Array.isArray(item.deployments?.transactions) 
-      ? item.deployments.transactions.map((tx) => ({
-          contractName: tx.contractName || null,
-          hash: tx.hash || null,
-          contractAddress: tx.contractAddress || null,
-        }))
-      : [], // Ensure transactions is an array; default to an empty array if not
+    transactions: Array.isArray(item.deployments?.transactions)
+      ? item.deployments.transactions
+          .filter((tx) => tx.contractName && tx.hash && tx.contractAddress) // Filter out incomplete transactions
+          .map((tx) => ({
+            contractName: tx.contractName,
+            hash: tx.hash,
+            contractAddress: tx.contractAddress,
+          }))
+      : [], // Default to an empty array if transactions are missing
   }));
 };
-
 /**
  * Sends deployment notification to the backend service
  * @param {Object} deploymentData - The deployment data to send
