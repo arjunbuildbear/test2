@@ -266,7 +266,7 @@ async function executeDeploy(deployCmd, workingDir) {
   await promise;
 }
 
-function extractDeploymentData(deployments: any[]) {
+function extractDeploymentData(deployments) {
   // Ensure deployments is an array
   if (!Array.isArray(deployments)) {
     deployments = [deployments];
