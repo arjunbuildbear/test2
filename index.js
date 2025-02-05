@@ -7,12 +7,12 @@ const fs = require("fs").promises;
 const path = require("path");
 const { getLatestBlockNumber } = require("./network");
 
-// Default mnemonic to be used as environment variable
-const DEFAULT_MNEMONIC =
-  "test test test test test test test test test test test junk";
+// // Default mnemonic to be used as environment variable
+// const DEFAULT_MNEMONIC =
+//   "test test test test test test test test test test test junk";
 
-// Export mnemonic as environment variable
-core.exportVariable("MNEMONIC", DEFAULT_MNEMONIC);
+// // Export mnemonic as environment variable
+// core.exportVariable("MNEMONIC", DEFAULT_MNEMONIC);
 
 /**
  * Recursively walk through directories
@@ -193,6 +193,8 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
     });
 
     core.exportVariable('BUILDBEAR_RPC_URL', response.data.rpcUrl);
+    // Export mnemonic as environment variable
+    core.exportVariable("MNEMONIC", response.data.mnemonic);
     return { 
       url: response.data.rpcUrl, 
       sandboxId 
