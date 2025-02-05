@@ -178,15 +178,13 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
     const sandboxId = `${repoName}-${commitHash.slice(0, 8)}-${randomBytes(4).toString('hex')}`;
     const url = 'https://api.dev.buildbear.io/v1/buildbear-sandbox';
     const bearerToken = core.getInput('buildbear-token', { required: true });
-
+    
     const data = {
       chainId: Number(chainId),
       nodeName: sandboxId.toString(),
       blockNumber: blockNumber ? Number(blockNumber) : undefined
     };
-
-    console.log(bearerToken)
-
+    
     const response = await axios.post(url, data, {
       headers: {
         'Authorization': `Bearer ${bearerToken}`,
@@ -194,16 +192,16 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
       }
     });
 
-    // Only export RPC URL if request was successful
     core.exportVariable('BUILDBEAR_RPC_URL', url);
-    return { response.data.rpcUrl, sandboxId };
-
+    return { 
+      rpcUrl: response.data.rpcUrl, 
+      sandboxId 
+    };
   } catch (error) {
     console.error('Error creating node:', error.response?.data || error.message);
     throw error;
   }
 }
-
 /**
  * Checks if the node is ready by continuously polling for status.
  *
