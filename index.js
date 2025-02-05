@@ -268,29 +268,17 @@ async function executeDeploy(deployCmd, workingDir) {
   await promise;
 }
 
-function extractDeploymentData(deployments) {
- if (!Array.isArray(deployments)) {
-   deployments = [deployments];
- }
-
- return deployments.reduce((acc, deployment) => {
-   if (!deployment?.deployments?.transactions) {
-     return acc;
-   }
-
-   const transactions = Array.isArray(deployment.deployments.transactions) 
-     ? deployment.deployments.transactions 
-     : [deployment.deployments.transactions];
-
-   return acc.concat(transactions.map(transaction => ({
-     chainId: deployment?.chainId,
-     contractName: transaction?.contractName,
-     contractAddress: transaction?.contractAddress,
-     hash: transaction?.hash,
-     rpcUrl: deployment?.rpcUrl
-   })));
- }, []);
-}
+const extractContractData = (data) => {
+  return data.map((item) => ({
+    chainId: item.chainId || null,
+    rpcUrl: item.rpcUrl || null,
+    transactions: (item.deployments?.transactions || []).map((tx) => ({
+      contractName: tx.contractName || null,
+      hash: tx.hash || null,
+      contractAddress: tx.contractAddress || null,
+    })),
+  }));
+};
 /**
  * Sends deployment notification to the backend service
  * @param {Object} deploymentData - The deployment data to send
@@ -301,7 +289,7 @@ async function sendNotificationToBackend(deploymentData) {
     const notificationEndpoint =
       "https://8f6a8c4e-a57e-42d3-9ef5-68443120ca3e.mock.pstmn.io";
 
-    const deployments = extractDeploymentData(deploymentData);
+    const deployments = extractContractData(deploymentData);
     const payload = {
       repositoryName: github.context.repo.repo,
       repositoryOwner: github.context.repo.owner,
