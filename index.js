@@ -269,16 +269,21 @@ async function executeDeploy(deployCmd, workingDir) {
 }
 
 const extractContractData = (data) => {
-  return data.map((item) => ({
+  const arrayData = Array.isArray(data) ? data : [data]; // Ensure data is an array
+
+  return arrayData.map((item) => ({
     chainId: item.chainId || null,
     rpcUrl: item.rpcUrl || null,
-    transactions: (item.deployments?.transactions || []).map((tx) => ({
-      contractName: tx.contractName || null,
-      hash: tx.hash || null,
-      contractAddress: tx.contractAddress || null,
-    })),
+    transactions: Array.isArray(item.deployments?.transactions) 
+      ? item.deployments.transactions.map((tx) => ({
+          contractName: tx.contractName || null,
+          hash: tx.hash || null,
+          contractAddress: tx.contractAddress || null,
+        }))
+      : [], // Ensure transactions is an array; default to an empty array if not
   }));
 };
+
 /**
  * Sends deployment notification to the backend service
  * @param {Object} deploymentData - The deployment data to send
