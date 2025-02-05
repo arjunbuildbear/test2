@@ -1,3 +1,6 @@
+const FALLBACK_MAX_REORG = 200;
+
+
 const RPC_URL = {
     1: { index: 0, urls: ["https://rpc.ankr.com/eth"] },
     56: { index: 0, urls: ["https://rpc.ankr.com/bsc"] },
@@ -63,7 +66,7 @@ async function getLatestBlockNumber(chainId) {
         }
 
         const data = await response.json();
-        return parseInt(data.result, 16); // Convert hex to decimal
+        return parseInt(data.result, 16) - FALLBACK_MAX_REORG; // Convert hex to decimal
     } catch (error) {
         console.error('Error fetching the latest block number:', error);
         throw error;
