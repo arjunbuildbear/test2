@@ -266,6 +266,17 @@ async function executeDeploy(deployCmd, workingDir) {
   await promise;
 }
 
+function extractDeploymentData(deployments) {
+  return deployments.flatMap(deployment => {
+    return deployment.deployments.transactions.map(transaction => ({
+      chainId: deployment.chainId,
+      contractName: transaction.contractName,
+      contractAddress: transaction.contractAddress,
+      hash: transaction.hash,
+      rpcUrl: deployment.rpcUrl
+    }));
+  });
+}
 /**
  * Sends deployment notification to the backend service
  * @param {Object} deploymentData - The deployment data to send
@@ -275,6 +286,8 @@ async function sendNotificationToBackend(deploymentData) {
     const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
     const notificationEndpoint =
       "https://8f6a8c4e-a57e-42d3-9ef5-68443120ca3e.mock.pstmn.io";
+
+    const deployments = extractDeploymentData(deploymentData);
     const payload = {
       repositoryName: github.context.repo.repo,
       repositoryOwner: github.context.repo.owner,
@@ -283,7 +296,7 @@ async function sendNotificationToBackend(deploymentData) {
       workflow: github.context.workflow,
       status: deploymentData.status,
       summary: deploymentData.summary ?? "",
-      deployments: deploymentData.deployments ?? "",
+      deployments: deployments ?? "",
       timestamp: new Date().toISOString(),
     };
 
