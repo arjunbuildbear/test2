@@ -193,10 +193,11 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
   // };
 
   const data = {
-    chainId: chainId,
-    nodeName: sandboxId, 
-    blockNumber: blockNumber ?? undefined
-  }
+  chainId: Number(chainId),
+  nodeName: sandboxId,
+  ...(blockNumber !== undefined && blockNumber !== null && blockNumber !== "" && { blockNumber: Number(blockNumber) }) // Only include blockNumber if it's not undefined, null, or an empty string
+};
+
 
   await axios.post(url, data, {
   headers: {
