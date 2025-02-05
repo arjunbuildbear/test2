@@ -266,7 +266,12 @@ async function executeDeploy(deployCmd, workingDir) {
   await promise;
 }
 
-function extractDeploymentData(deployments) {
+function extractDeploymentData(deployments: any[]) {
+  // Ensure deployments is an array
+  if (!Array.isArray(deployments)) {
+    deployments = [deployments];
+  }
+
   return deployments.flatMap(deployment => {
     return deployment.deployments.transactions.map(transaction => ({
       chainId: deployment.chainId,
