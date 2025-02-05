@@ -196,7 +196,7 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
 
     // Only export RPC URL if request was successful
     core.exportVariable('BUILDBEAR_RPC_URL', url);
-    return { response?.rpcUrl, sandboxId };
+    return { response.rpcUrl, sandboxId };
 
   } catch (error) {
     console.error('Error creating node:', error.response?.data || error.message);
