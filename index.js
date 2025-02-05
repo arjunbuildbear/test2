@@ -275,6 +275,7 @@ const extractContractData = (data) => {
   return arrayData.map((item) => ({
     chainId: item.chainId || null,
     rpcUrl: item.rpcUrl || null,
+    sandboxId: item.sandboxId || null,
     transactions: Array.isArray(item.deployments?.transactions)
       ? item.deployments.transactions
           .filter((tx) => tx.contractName && tx.hash && tx.contractAddress) // Filter out incomplete transactions
