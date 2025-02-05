@@ -178,6 +178,8 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
   const url = `https://api.dev.buildbear.io/v1/buildbear-sandbox`;
   const bearerToken = core.getInput("buildbear-token", { required: true })
 
+  console.log(bearerToken)
+
   // const data = {
   //   jsonrpc: "2.0",
   //   id: 1,
@@ -197,11 +199,12 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
   }
 
   await axios.post(url, data, {
- headers: {
-   'Authorization': `Bearer ${bearerToken}`,
-   'Content-Type': 'application/json'
- }
+  headers: {
+    'Authorization': `Bearer ${bearerToken}`,
+    'Content-Type': 'application/json'
+  }
 });
+
 
   // Export RPC URL as environment variable for later use
   core.exportVariable("BUILDBEAR_RPC_URL", url);
