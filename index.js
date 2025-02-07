@@ -312,7 +312,7 @@ async function sendNotificationToBackend(deploymentData) {
 
     const compressedPayload = zlib.gzipSync(JSON.stringify(payload));
 
-    await axios.post(url, compressedPayload, {
+    await axios.post(notificationEndpoint, compressedPayload, {
       headers: {
         "Content-Encoding": "gzip",
         "Content-Type": "application/json"
