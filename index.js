@@ -295,7 +295,7 @@ async function sendNotificationToBackend(deploymentData) {
   try {
     const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
     const notificationEndpoint =
-      "https://dd30-2401-4900-1f24-e3a-d020-9b9a-7eaa-b7c1.ngrok-free.app/internal/ci/notify";
+      "https://dd30-2401-4900-1f24-e3a-d020-9b9a-7eaa-b7c1.ngrok-free.app/ci/deployment-notification";
 
     const deployments = extractContractData(deploymentData.deployments);
     const payload = {
