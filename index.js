@@ -3,6 +3,7 @@ const github = require("@actions/github");
 const { default: axios } = require("axios");
 const { spawn } = require("child_process");
 const { randomBytes } = require("crypto");
+const zlib = require('node:zlib');
 const fs = require("fs").promises;
 const path = require("path");
 const { getLatestBlockNumber } = require("./network");
@@ -178,13 +179,13 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
     const sandboxId = `${repoName}-${commitHash.slice(0, 8)}-${randomBytes(4).toString('hex')}`;
     const url = 'https://api.dev.buildbear.io/v1/buildbear-sandbox';
     const bearerToken = core.getInput('buildbear-token', { required: true });
-    
+
     const data = {
       chainId: Number(chainId),
       nodeName: sandboxId.toString(),
       blockNumber: blockNumber ? Number(blockNumber) : undefined
     };
-    
+
     const response = await axios.post(url, data, {
       headers: {
         'Authorization': `Bearer ${bearerToken}`,
@@ -195,9 +196,9 @@ async function createNode(repoName, commitHash, chainId, blockNumber) {
     core.exportVariable('BUILDBEAR_RPC_URL', response.data.rpcUrl);
     // Export mnemonic as environment variable
     core.exportVariable("MNEMONIC", response.data.mnemonic);
-    return { 
-      url: response.data.rpcUrl, 
-      sandboxId 
+    return {
+      url: response.data.rpcUrl,
+      sandboxId
     };
   } catch (error) {
     console.error('Error creating node:', error.response?.data || error.message);
@@ -269,7 +270,6 @@ async function executeDeploy(deployCmd, workingDir) {
 }
 
 const extractContractData = (data) => {
-  console.log(data)
   const arrayData = Array.isArray(data) ? data : [data]; // Ensure data is an array
 
   return arrayData.map((item) => ({
@@ -278,12 +278,12 @@ const extractContractData = (data) => {
     sandboxId: item.sandboxId || null,
     transactions: Array.isArray(item.deployments?.transactions)
       ? item.deployments.transactions
-          .filter((tx) => tx.contractName && tx.hash && tx.contractAddress) // Filter out incomplete transactions
-          .map((tx) => ({
-            contractName: tx.contractName,
-            hash: tx.hash,
-            contractAddress: tx.contractAddress,
-          }))
+        .filter((tx) => tx.contractName && tx.hash && tx.contractAddress) // Filter out incomplete transactions
+        .map((tx) => ({
+          contractName: tx.contractName,
+          hash: tx.hash,
+          contractAddress: tx.contractAddress,
+        }))
       : [], // Default to an empty array if transactions are missing
   }));
 };
@@ -295,7 +295,7 @@ async function sendNotificationToBackend(deploymentData) {
   try {
     const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
     const notificationEndpoint =
-      "https://backend.alpha.buildbear.io/internal/ci/notify";
+      "https://dd30-2401-4900-1f24-e3a-d020-9b9a-7eaa-b7c1.ngrok-free.app/internal/ci/notify";
 
     const deployments = extractContractData(deploymentData.deployments);
     const payload = {
@@ -310,7 +310,15 @@ async function sendNotificationToBackend(deploymentData) {
       timestamp: new Date().toISOString(),
     };
 
-    await axios.post(notificationEndpoint, payload);
+    const compressedPayload = zlib.gzipSync(JSON.stringify(payload));
+
+    await axios.post(url, compressedPayload, {
+      headers: {
+        "Content-Encoding": "gzip",
+        "Content-Type": "application/json"
+      }
+    });
+
     console.log("Notification sent to backend service successfully.");
   } catch (error) {
     console.error("Error sending notification to backend:", error.message);
@@ -371,7 +379,7 @@ async function sendNotificationToBackend(deploymentData) {
       if (isNodeLive) {
         console.log(`\n📄 Executing deployment for chainId ${net.chainId}`);
         // 5 seconds delay before logging the URL
-        setTimeout(() => {}, 5000);
+        setTimeout(() => { }, 5000);
 
         // Execute the deploy command after node becomes live
         await executeDeploy(deployCmd, workingDir);
