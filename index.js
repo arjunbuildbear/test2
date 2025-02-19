@@ -3,7 +3,6 @@ const github = require("@actions/github");
 const { default: axios } = require("axios");
 const { spawn } = require("child_process");
 const { randomBytes } = require("crypto");
-const zlib = require('node:zlib');
 const fs = require("fs").promises;
 const path = require("path");
 const { getLatestBlockNumber } = require("./network");
@@ -176,32 +175,34 @@ async function processBroadcastDirectory(chainId, workingDir) {
  */
 async function createNode(repoName, commitHash, chainId, blockNumber) {
   try {
-    const sandboxId = `${repoName}-${commitHash.slice(0, 8)}-${randomBytes(4).toString('hex')}`;
-    const url = 'https://api.dev.buildbear.io/v1/buildbear-sandbox';
-    const bearerToken = core.getInput('buildbear-token', { required: true });
+    const sandboxId = `${repoName}-${commitHash.slice(0, 8)}-${randomBytes(4).toString("hex")}`;
+    const url = "https://api.dev.buildbear.io/v1/buildbear-sandbox";
+    const bearerToken = core.getInput("buildbear-token", { required: true });
 
     const data = {
       chainId: Number(chainId),
       nodeName: sandboxId.toString(),
-      blockNumber: blockNumber ? Number(blockNumber) : undefined
+      blockNumber: blockNumber ? Number(blockNumber) : undefined,
     };
 
     const response = await axios.post(url, data, {
       headers: {
-        'Authorization': `Bearer ${bearerToken}`,
-        'Content-Type': 'application/json'
-      }
+        Authorization: `Bearer ${bearerToken}`,
+        "Content-Type": "application/json",
+      },
     });
 
-    core.exportVariable('BUILDBEAR_RPC_URL', response.data.rpcUrl);
-    // Export mnemonic as environment variable
+    core.exportVariable("BUILDBEAR_RPC_URL", response.data.rpcUrl);
     core.exportVariable("MNEMONIC", response.data.mnemonic);
     return {
       url: response.data.rpcUrl,
-      sandboxId
+      sandboxId,
     };
   } catch (error) {
-    console.error('Error creating node:', error.response?.data || error.message);
+    console.error(
+      "Error creating node:",
+      error.response?.data || error.message,
+    );
     throw error;
   }
 }
@@ -278,12 +279,12 @@ const extractContractData = (data) => {
     sandboxId: item.sandboxId || null,
     transactions: Array.isArray(item.deployments?.transactions)
       ? item.deployments.transactions
-        .filter((tx) => tx.contractName && tx.hash && tx.contractAddress) // Filter out incomplete transactions
-        .map((tx) => ({
-          contractName: tx.contractName,
-          hash: tx.hash,
-          contractAddress: tx.contractAddress,
-        }))
+          .filter((tx) => tx.contractName && tx.hash && tx.contractAddress) // Filter out incomplete transactions
+          .map((tx) => ({
+            contractName: tx.contractName,
+            hash: tx.hash,
+            contractAddress: tx.contractAddress,
+          }))
       : [], // Default to an empty array if transactions are missing
   }));
 };
@@ -295,7 +296,7 @@ async function sendNotificationToBackend(deploymentData) {
   try {
     const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
     const notificationEndpoint =
-      "https://dd30-2401-4900-1f24-e3a-d020-9b9a-7eaa-b7c1.ngrok-free.app/ci/deployment-notification";
+      "https://api.dev.buildbear.io/ci/deployment-notification";
 
     const deployments = extractContractData(deploymentData.deployments);
     const payload = {
@@ -310,18 +311,9 @@ async function sendNotificationToBackend(deploymentData) {
       timestamp: new Date().toISOString(),
     };
 
-    const compressedPayload = zlib.gzipSync(JSON.stringify(payload));
-
-    await axios.post(notificationEndpoint, compressedPayload, {
-      headers: {
-        "Content-Encoding": "gzip",
-        "Content-Type": "application/json"
-      }
-    });
-
-    console.log("Notification sent to backend service successfully.");
+    await axios.post(notificationEndpoint, payload);
   } catch (error) {
-    console.error("Error sending notification to backend:", error.message);
+    console.log(error)
     // Don't throw error to prevent action failure due to notification issues
   }
 }
@@ -379,7 +371,7 @@ async function sendNotificationToBackend(deploymentData) {
       if (isNodeLive) {
         console.log(`\n📄 Executing deployment for chainId ${net.chainId}`);
         // 5 seconds delay before logging the URL
-        setTimeout(() => { }, 5000);
+        setTimeout(() => {}, 5000);
 
         // Execute the deploy command after node becomes live
         await executeDeploy(deployCmd, workingDir);
@@ -463,7 +455,7 @@ async function sendNotificationToBackend(deploymentData) {
 
     deploymentNotificationData = {
       status: "success",
-      deployments: allDeployments
+      deployments: allDeployments,
     };
     await sendNotificationToBackend(deploymentNotificationData);
   } catch (error) {
