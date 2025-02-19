@@ -312,7 +312,7 @@ async function sendNotificationToBackend(deploymentData) {
       workflow: github.context.workflow,
       status: deploymentData.status,
       summary: deploymentData.summary ?? "",
-      deployments: deployments ?? "",
+      deployments: deployments ?? [],
       timestamp: new Date().toISOString(),
     };
     await axios.post(notificationEndpoint, payload);
