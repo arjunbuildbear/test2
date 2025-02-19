@@ -514,7 +514,7 @@ const validateDeployment = (extractedData) => {
   } catch (error) {
     let deploymentNotificationData = {
       status: "failed",
-      summary: `Deployment failed: ${error.message}`,
+      summary: `Deployment failed`,
       deployments: [],
     };
     await sendNotificationToBackend(deploymentNotificationData);
