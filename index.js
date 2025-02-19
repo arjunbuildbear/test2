@@ -297,8 +297,13 @@ async function sendNotificationToBackend(deploymentData) {
     const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
     const notificationEndpoint =
       "https://504f-2401-4900-8813-1a1a-cfc-a3d9-15a8-cbbc.ngrok-free.app/ci/deployment-notification";
-
-    const deployments = extractContractData(deploymentData.deployments);
+    
+    // Skip extractContractData for "deployment started" or "failed" status
+    let deployments = "";
+    if (deploymentData.status !== "deployment started" && deploymentData.status !== "failed") {
+      deployments = extractContractData(deploymentData.deployments);
+    }
+    
     const payload = {
       repositoryName: github.context.repo.repo,
       repositoryOwner: github.context.repo.owner,
@@ -310,7 +315,6 @@ async function sendNotificationToBackend(deploymentData) {
       deployments: deployments ?? "",
       timestamp: new Date().toISOString(),
     };
-
     await axios.post(notificationEndpoint, payload);
   } catch (error) {
     console.log(error)
