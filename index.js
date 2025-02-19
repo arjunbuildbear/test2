@@ -296,7 +296,7 @@ async function sendNotificationToBackend(deploymentData) {
   try {
     const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
     const notificationEndpoint =
-      "https://api.dev.buildbear.io/ci/deployment-notification";
+      "https://504f-2401-4900-8813-1a1a-cfc-a3d9-15a8-cbbc.ngrok-free.app/ci/deployment-notification";
 
     const deployments = extractContractData(deploymentData.deployments);
     const payload = {
