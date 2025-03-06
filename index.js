@@ -309,7 +309,7 @@ async function sendNotificationToBackend(deploymentData) {
     let deployments = [];
     
     // Process deployment data if not "deployment started" or already "failed"
-    if (status !== "deployment started" && status !== "failed") {
+    if (status !== "started" && status !== "failed") {
       // Extract contract data
       deployments = extractContractData(deploymentData.deployments);
       
