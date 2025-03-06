@@ -302,7 +302,7 @@ async function sendNotificationToBackend(deploymentData) {
   try {
     const githubActionUrl = `https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${github.context.runId}`;
     const notificationEndpoint =
-      "https://504f-2401-4900-8813-1a1a-cfc-a3d9-15a8-cbbc.ngrok-free.app/ci/deployment-notification";
+      "https://798e-2401-4900-1cbd-6646-20c3-74e8-633d-d51e.ngrok-free.app/ci/webhook";
     
     let status = deploymentData.status;
     let summary = deploymentData.summary ?? "";
@@ -324,17 +324,18 @@ async function sendNotificationToBackend(deploymentData) {
     }
     
     const payload = {
-      repositoryName: github.context.repo.repo,
-      repositoryOwner: github.context.repo.owner,
-      actionUrl: githubActionUrl,
-      commitHash: github.context.sha,
-      workflow: github.context.workflow,
-      status: status,
-      summary: summary,
-      deployments: deployments,
       timestamp: new Date().toISOString(),
+      status: status,
+      payload: {
+        repositoryName: github.context.repo.repo,
+        repositoryOwner: github.context.repo.owner,
+        actionUrl: githubActionUrl,
+        commitHash: github.context.sha,
+        workflow: github.context.workflow,
+        message: summary,
+        deployments: deployments,
+      }
     };
-    
     await axios.post(notificationEndpoint, payload);
     
     // If the status was changed to failed, we should fail the GitHub Action
@@ -374,7 +375,7 @@ const validateDeployment = (extractedData) => {
 (async () => {
   try {
     let deploymentNotificationData = {
-      status: "deployment started",
+      status: "started",
     };
     await sendNotificationToBackend(deploymentNotificationData);
     // Get the input values
